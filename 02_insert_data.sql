@@ -22,3 +22,16 @@ INSERT INTO Matches (league_id, home_team_id, away_team_id, match_date, match_st
 -- Hatırlatma: İlk eklediğimiz maçın ID'si otomatik olarak 1 olacak.
 INSERT INTO Betting_Odds (match_id, home_win_odd, draw_odd, away_win_odd) VALUES 
 (1, 3.40, 3.80, 1.85); -- Galatasaray galibiyetine 3.40, beraberliğe 3.80, Real Madrid'e 1.85 oran
+
+SELECT 
+    m.match_date AS "Maç Tarihi",
+    ht.team_name AS "Ev Sahibi",
+    at.team_name AS "Deplasman",
+    o.home_win_odd AS "MS 1 Oranı",
+    o.draw_odd AS "MS X Oranı",
+    o.away_win_odd AS "MS 2 Oranı",
+    m.match_status AS "Durum"
+FROM Matches m
+INNER JOIN Teams ht ON m.home_team_id = ht.team_id
+INNER JOIN Teams at ON m.away_team_id = at.team_id
+LEFT JOIN Betting_Odds o ON m.match_id = o.match_id;
