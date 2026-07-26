@@ -1,20 +1,22 @@
 const express = require('express');
 const { Pool } = require('pg');
+const cors = require('cors');
 
 const app = express();
 const port = 5000;
+
+// Middleware Ayarları
+app.use(cors());
+app.use(express.json());
 
 // PostgreSQL Bağlantı Ayarları
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
   database: 'sports_analytix_db',
-  password: 'ufuk1234', // <-- Kendi şifreni buraya yazmayı unutma!
+  password: 'ufuk1234',
   port: 5432,
 });
-
-// JSON verilerini okuyabilmek için middleware
-app.use(express.json());
 
 // 1. Test Rotası
 app.get('/', (req, res) => {
