@@ -1,0 +1,25 @@
+{
+  "name": "sports_analytix_project",
+  "version": "1.0.0",
+  "description": "A PostgreSQL-based relational database management system designed to model, store, and query sports events, leagues, teams, and dynamic betting odds. This project demonstrates database normalization, relational constraints, and advanced data analysis via multi-table joins.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Calgarian/sports-analytix-db.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Calgarian/sports-analytix-db/issues"
+  },
+  "homepage": "https://github.com/Calgarian/sports-analytix-db#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "pg": "^8.22.0"
+  }
+}
