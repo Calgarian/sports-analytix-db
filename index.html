@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sports Analytix - Maç Bülteni</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Tıklama ve Katman Çakışmasını Engelleyen Stil Düzeltmesi */
+        .btn-submit {
+            position: relative !important;
+            z-index: 999 !important;
+            pointer-events: auto !important;
+            cursor: pointer !important;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -13,43 +22,129 @@
             <p>Canlı Veritabanı Entegrasyonlu Maç ve Oran Paneli</p>
         </header>
 
+        <!-- Yeni Maç Ekleme Formu -->
+        <div class="card form-card">
+            <h2>Yeni Maç Oluştur</h2>
+            <form id="add-match-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="home_team_id">Ev Sahibi Takım ID</label>
+                        <input type="number" id="home_team_id" placeholder="Örn: 1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="away_team_id">Deplasman Takım ID</label>
+                        <input type="number" id="away_team_id" placeholder="Örn: 2" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="match_date">Maç Tarihi ve Saati</label>
+                        <input type="datetime-local" id="match_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="home_win_odd">MS 1 Oranı</label>
+                        <input type="number" step="0.01" id="home_win_odd" placeholder="1.85" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="draw_odd">MS X Oranı</label>
+                        <input type="number" step="0.01" id="draw_odd" placeholder="3.40" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="away_win_odd">MS 2 Oranı</label>
+                        <input type="number" step="0.01" id="away_win_odd" placeholder="3.80" required>
+                    </div>
+                </div>
+                <button type="submit" id="submit-btn" class="btn-submit">Maçı Kaydet</button>
+            </form>
+        </div>
+
+        <!-- Yaklaşan Maçlar Tablosu -->
         <main>
             <div class="card">
                 <h2>Yaklaşan Maçlar</h2>
-                <table id="matches-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Tarih</th>
-                            <th>Ev Sahibi</th>
-                            <th>Deplasman</th>
-                            <th>MS 1</th>
-                            <th>MS X</th>
-                            <th>MS 2</th>
-                        </tr>
-                    </thead>
-                    <tbody id="matches-body">
-                        <!-- Veriler JavaScript ile buraya akacak -->
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table id="matches-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tarih</th>
+                                <th>Ev Sahibi</th>
+                                <th>Deplasman</th>
+                                <th>MS 1</th>
+                                <th>MS X</th>
+                                <th>MS 2</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matches-body">
+                            <!-- Veriler JavaScript ile buraya akacak -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </main>
     </div>
 
     <script>
-        // API'den veri çekip tabloya basan fonksiyon
+        // DOM Katmanının Tam Yüklenmesini Garantiye Alıyoruz
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchMatches();
+
+            const matchForm = document.getElementById('add-match-form');
+            
+            if (matchForm) {
+                matchForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+
+                    const matchData = {
+                        home_team_id: parseInt(document.getElementById('home_team_id').value),
+                        away_team_id: parseInt(document.getElementById('away_team_id').value),
+                        match_date: document.getElementById('match_date').value,
+                        home_win_odd: parseFloat(document.getElementById('home_win_odd').value),
+                        draw_odd: parseFloat(document.getElementById('draw_odd').value),
+                        away_win_odd: parseFloat(document.getElementById('away_win_odd').value)
+                    };
+
+                    try {
+                        const response = await fetch('http://localhost:5000/api/matches', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(matchData)
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok) {
+                            alert('Maç veritabanına başarıyla kaydedildi!');
+                            matchForm.reset();
+                            fetchMatches();
+                        } else {
+                            alert('Hata: ' + (result.error || 'Maç eklenemedi.'));
+                        }
+                    } catch (error) {
+                        console.error('POST hatası:', error);
+                        alert('Sunucuya bağlanılamadı. Node.js sunucusunun (server.js) çalıştığından emin ol.');
+                    }
+                });
+            }
+        });
+
+        // API'den Veri Çekme Fonksiyonu
         async function fetchMatches() {
             try {
                 const response = await fetch('http://localhost:5000/api/matches');
-                const matches = await response.json();
                 
+                if (!response.ok) {
+                    throw new Error('Veri çekme işlemi başarısız: ' + response.statusText);
+                }
+
+                const matches = await response.json();
                 const tableBody = document.getElementById('matches-body');
+                
+                if (!tableBody) return;
+                
                 tableBody.innerHTML = '';
 
                 matches.forEach(match => {
                     const row = document.createElement('tr');
                     
-                    // Tarih formatlama
                     const matchDate = new Date(match.match_date).toLocaleString('tr-TR', {
                         day: '2-digit',
                         month: '2-digit',
@@ -63,9 +158,9 @@
                         <td>${matchDate}</td>
                         <td><strong>${match.home_team}</strong></td>
                         <td><strong>${match.away_team}</strong></td>
-                        <td><span class="badge odd">${match.home_win_odd}</span></td>
-                        <td><span class="badge odd">${match.draw_odd}</span></td>
-                        <td><span class="badge odd">${match.away_win_odd}</span></td>
+                        <td><span class="odd-badge">${match.home_win_odd ? Number(match.home_win_odd).toFixed(2) : '-'}</span></td>
+                        <td><span class="odd-badge">${match.draw_odd ? Number(match.draw_odd).toFixed(2) : '-'}</span></td>
+                        <td><span class="odd-badge">${match.away_win_odd ? Number(match.away_win_odd).toFixed(2) : '-'}</span></td>
                     `;
                     tableBody.appendChild(row);
                 });
@@ -73,9 +168,6 @@
                 console.error('Veri çekme hatası:', error);
             }
         }
-
-        // Sayfa yüklendiğinde çalıştır
-        fetchMatches();
     </script>
 </body>
 </html>

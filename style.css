@@ -25,11 +25,12 @@ header {
 header h1 {
     font-size: 2rem;
     color: #38bdf8;
+    margin-bottom: 5px;
 }
 
 header p {
     color: #94a3b8;
-    margin-top: 5px;
+    font-size: 0.95rem;
 }
 
 .card {
@@ -43,6 +44,63 @@ header p {
     font-size: 1.25rem;
     margin-bottom: 20px;
     color: #e2e8f0;
+}
+
+/* Form Alanı Stilleri */
+.form-card {
+    margin-bottom: 24px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.form-group input {
+    background-color: #0f172a;
+    border: 1px solid #334155;
+    color: #f8fafc;
+    padding: 8px 12px;
+    border-radius: 6px;
+    outline: none;
+}
+
+.form-group input:focus {
+    border-color: #38bdf8;
+}
+
+.btn-submit {
+    background-color: #0284c7;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-submit:hover {
+    background-color: #0369a1;
+}
+
+/* Tablo Stilleri */
+.table-responsive {
+    overflow-x: auto;
 }
 
 table {
@@ -69,9 +127,14 @@ tr:hover {
     background-color: #334155;
 }
 
-.badge.odd {
+tr:last-child td {
+    border-bottom: none;
+}
+
+/* Oran Kutucukları (index.html ile tam uyumlu sınıf adı) */
+.odd-badge {
     background-color: #0284c7;
-    color: #fff;
+    color: #ffffff;
     padding: 4px 8px;
     border-radius: 4px;
     font-weight: bold;
