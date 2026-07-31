@@ -6,12 +6,57 @@
     <title>Sports Analytix - Maç Bülteni</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Tıklama ve Katman Çakışmasını Engelleyen Stil Düzeltmesi */
         .btn-submit {
             position: relative !important;
             z-index: 999 !important;
             pointer-events: auto !important;
             cursor: pointer !important;
+        }
+        .btn-delete {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .btn-delete:hover { background: #c0392b; }
+        
+        .btn-edit {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+            transition: background 0.2s ease;
+        }
+        .btn-edit:hover { background: #2980b9; }
+
+        /* Modal Stilleri */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 15px;
         }
     </style>
 </head>
@@ -71,28 +116,50 @@
                                 <th>MS 1</th>
                                 <th>MS X</th>
                                 <th>MS 2</th>
+                                <th>Aksiyon</th>
                             </tr>
                         </thead>
-                        <tbody id="matches-body">
-                            <!-- Veriler JavaScript ile buraya akacak -->
-                        </tbody>
+                        <tbody id="matches-body"></tbody>
                     </table>
                 </div>
             </div>
         </main>
     </div>
 
+    <!-- Oran Güncelleme Modalı -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <h3>Oranları Güncelle (Maç ID: <span id="modal-match-id"></span>)</h3>
+            <form id="edit-odds-form">
+                <input type="hidden" id="edit-id">
+                <div class="form-group">
+                    <label for="edit_home_win_odd">MS 1 Oranı</label>
+                    <input type="number" step="0.01" id="edit_home_win_odd" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_draw_odd">MS X Oranı</label>
+                    <input type="number" step="0.01" id="edit_draw_odd" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_away_win_odd">MS 2 Oranı</label>
+                    <input type="number" step="0.01" id="edit_away_win_odd" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="closeModal()">İptal</button>
+                    <button type="submit" class="btn-submit">Güncelle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
-        // DOM Katmanının Tam Yüklenmesini Garantiye Alıyoruz
         document.addEventListener('DOMContentLoaded', () => {
             fetchMatches();
 
             const matchForm = document.getElementById('add-match-form');
-            
             if (matchForm) {
                 matchForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
-
                     const matchData = {
                         home_team_id: parseInt(document.getElementById('home_team_id').value),
                         away_team_id: parseInt(document.getElementById('away_team_id').value),
@@ -108,64 +175,120 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(matchData)
                         });
-
                         const result = await response.json();
-
                         if (response.ok) {
-                            alert('Maç veritabanına başarıyla kaydedildi!');
+                            alert('Maç başarıyla eklendi!');
                             matchForm.reset();
                             fetchMatches();
                         } else {
-                            alert('Hata: ' + (result.error || 'Maç eklenemedi.'));
+                            alert('Hata: ' + result.error);
                         }
                     } catch (error) {
-                        console.error('POST hatası:', error);
-                        alert('Sunucuya bağlanılamadı. Node.js sunucusunun (server.js) çalıştığından emin ol.');
+                        alert('Sunucuya bağlanılamadı.');
                     }
                 });
             }
+
+            // Modal Formu Gönderimi (PUT İsteği)
+            document.getElementById('edit-odds-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const matchId = document.getElementById('edit-id').value;
+                const oddsData = {
+                    home_win_odd: parseFloat(document.getElementById('edit_home_win_odd').value),
+                    draw_odd: parseFloat(document.getElementById('edit_draw_odd').value),
+                    away_win_odd: parseFloat(document.getElementById('edit_away_win_odd').value)
+                };
+
+                try {
+                    const response = await fetch(`http://localhost:5000/api/matches/${matchId}/odds`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(oddsData)
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        alert('Oranlar başarıyla güncellendi.');
+                        closeModal();
+                        fetchMatches();
+                    } else {
+                        alert('Hata: ' + result.error);
+                    }
+                } catch (error) {
+                    alert('Güncelleme sırasında sunucu hatası oluştu.');
+                }
+            });
         });
 
-        // API'den Veri Çekme Fonksiyonu
         async function fetchMatches() {
             try {
                 const response = await fetch('http://localhost:5000/api/matches');
-                
-                if (!response.ok) {
-                    throw new Error('Veri çekme işlemi başarısız: ' + response.statusText);
-                }
+                if (!response.ok) throw new Error('Veri çekilemedi');
 
                 const matches = await response.json();
                 const tableBody = document.getElementById('matches-body');
-                
                 if (!tableBody) return;
                 
                 tableBody.innerHTML = '';
 
                 matches.forEach(match => {
                     const row = document.createElement('tr');
-                    
                     const matchDate = new Date(match.match_date).toLocaleString('tr-TR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
+                        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
                     });
+
+                    const hOdd = match.home_win_odd ? Number(match.home_win_odd).toFixed(2) : '1.00';
+                    const dOdd = match.draw_odd ? Number(match.draw_odd).toFixed(2) : '1.00';
+                    const aOdd = match.away_win_odd ? Number(match.away_win_odd).toFixed(2) : '1.00';
 
                     row.innerHTML = `
                         <td>${match.match_id}</td>
                         <td>${matchDate}</td>
                         <td><strong>${match.home_team}</strong></td>
                         <td><strong>${match.away_team}</strong></td>
-                        <td><span class="odd-badge">${match.home_win_odd ? Number(match.home_win_odd).toFixed(2) : '-'}</span></td>
-                        <td><span class="odd-badge">${match.draw_odd ? Number(match.draw_odd).toFixed(2) : '-'}</span></td>
-                        <td><span class="odd-badge">${match.away_win_odd ? Number(match.away_win_odd).toFixed(2) : '-'}</span></td>
+                        <td><span class="odd-badge">${hOdd}</span></td>
+                        <td><span class="odd-badge">${dOdd}</span></td>
+                        <td><span class="odd-badge">${aOdd}</span></td>
+                        <td>
+                            <button onclick="openEditModal(${match.match_id}, ${hOdd}, ${dOdd}, ${aOdd})" class="btn-edit">Düzenle</button>
+                            <button onclick="deleteMatch(${match.match_id})" class="btn-delete">Sil</button>
+                        </td>
                     `;
                     tableBody.appendChild(row);
                 });
             } catch (error) {
                 console.error('Veri çekme hatası:', error);
+            }
+        }
+
+        function openEditModal(id, hOdd, dOdd, aOdd) {
+            document.getElementById('edit-id').value = id;
+            document.getElementById('modal-match-id').innerText = id;
+            document.getElementById('edit_home_win_odd').value = hOdd;
+            document.getElementById('edit_draw_odd').value = dOdd;
+            document.getElementById('edit_away_win_odd').value = aOdd;
+            document.getElementById('edit-modal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+        }
+
+        async function deleteMatch(matchId) {
+            if (!confirm(`${matchId} ID'li maçı silmek istediğine emin misin?`)) return;
+
+            try {
+                const response = await fetch(`http://localhost:5000/api/matches/${matchId}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    alert('Maç başarıyla silindi.');
+                    fetchMatches();
+                } else {
+                    const result = await response.json();
+                    alert('Hata: ' + result.error);
+                }
+            } catch (error) {
+                alert('Sunucuya bağlanılamadı.');
             }
         }
     </script>
