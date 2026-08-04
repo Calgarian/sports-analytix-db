@@ -9,6 +9,7 @@ const port = process.env.PORT || 5000;
 // Middleware Ayarları
 app.use(cors());
 app.use(express.json());
+app.use(express.static(__dirname)); // HTML ve CSS dosyalarını sunucu üzerinden açar
 
 // PostgreSQL Bağlantı Pool'u
 const pool = new Pool({
@@ -24,7 +25,7 @@ const isValidOdd = (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0;
 
 // 1. Test Rotası
 app.get('/', (req, res) => {
-  res.send('Sports Analytix API çalışıyor!');
+  res.sendFile(__dirname + '/index.html');
 });
 
 // 2. Tüm Maçları Getiren Rota (GET)
@@ -40,8 +41,8 @@ app.get('/api/matches', async (req, res) => {
         bo.draw_odd,
         bo.away_win_odd
       FROM matches m
-      INNER JOIN teams t1 ON m.home_team_id = t1.team_id
-      INNER JOIN teams t2 ON m.away_team_id = t2.team_id
+      LEFT JOIN teams t1 ON m.home_team_id = t1.team_id
+      LEFT JOIN teams t2 ON m.away_team_id = t2.team_id
       LEFT JOIN betting_odds bo ON m.match_id = bo.match_id
       ORDER BY m.match_date DESC;
     `;
@@ -54,16 +55,14 @@ app.get('/api/matches', async (req, res) => {
   }
 });
 
-// 3. Yeni Maç Ekleme Rotası (POST - Transaction'lı)
+// 3. Yeni Maç Ekleme Rotası (POST)
 app.post('/api/matches', async (req, res) => {
   const { home_team_id, away_team_id, match_date, home_win_odd, draw_odd, away_win_odd } = req.body;
 
-  // Validasyon 1: Takımlar aynı olamaz
   if (parseInt(home_team_id) === parseInt(away_team_id)) {
     return res.status(400).json({ error: 'Ev sahibi ve deplasman takımı aynı olamaz.' });
   }
 
-  // Validasyon 2: Oranlar sayısal ve 0'dan büyük olmalı
   if (!isValidOdd(home_win_odd) || !isValidOdd(draw_odd) || !isValidOdd(away_win_odd)) {
     return res.status(400).json({ error: 'Geçerli ve 0’dan büyük oran değerleri giriniz.' });
   }
@@ -105,37 +104,24 @@ app.post('/api/matches', async (req, res) => {
   }
 });
 
-// 4. Maç ve Oran Silme Rotası (DELETE)
+// 4. Maç Silme Rotası (DELETE)
 app.delete('/api/matches/:id', async (req, res) => {
   const matchId = parseInt(req.params.id);
   if (isNaN(matchId)) {
     return res.status(400).json({ error: 'Geçersiz Maç ID parametresi.' });
   }
 
-  let client;
-
   try {
-    client = await pool.connect();
-    await client.query('BEGIN');
-
-    // betting_odds tablosundan sil
-    await client.query('DELETE FROM betting_odds WHERE match_id = $1', [matchId]);
-    // matches tablosundan sil
-    const result = await client.query('DELETE FROM matches WHERE match_id = $1 RETURNING *', [matchId]);
+    const result = await pool.query('DELETE FROM matches WHERE match_id = $1 RETURNING *', [matchId]);
 
     if (result.rowCount === 0) {
-      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Silinmek istenen maç bulunamadı.' });
     }
 
-    await client.query('COMMIT');
     res.json({ message: 'Maç ve bağlı oranlar başarıyla silindi.', match_id: matchId });
   } catch (err) {
-    if (client) await client.query('ROLLBACK');
     console.error('Maç silme hatası:', err.message);
     res.status(500).json({ error: 'Silme işlemi sırasında hata oluştu.' });
-  } finally {
-    if (client) client.release();
   }
 });
 
@@ -172,7 +158,6 @@ app.put('/api/matches/:id/odds', async (req, res) => {
   }
 });
 
-// Sunucuyu En Son Başlat
 app.listen(port, () => {
-  console.log(`Sunucu http://localhost:${port} adresinde ayağa kalktı.`);
+  console.log(`Sunucu http://localhost:${port} adresinde aktif.`);
 });
