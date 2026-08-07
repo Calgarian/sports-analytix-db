@@ -102,6 +102,11 @@
             </form>
         </div>
 
+        <!-- Arama Kutusu -->
+        <div style="margin-bottom: 15px;">
+            <input type="text" id="search-input" placeholder="Takım adına göre ara..." onkeyup="filterMatches()" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #333; background: #1e293b; color: #fff;">
+        </div>
+
         <!-- Yaklaşan Maçlar Tablosu -->
         <main>
             <div class="card">
@@ -154,10 +159,7 @@
     </div>
 
     <script>
-        // API Base URL tespiti: Relative Path kullanımı CORS ve Port çakışmalarını engeller
-        const API_BASE_URL = window.location.origin.includes('5000') || window.location.origin.includes('3000') 
-            ? '/api/matches' 
-            : 'http://localhost:5000/api/matches';
+        const API_BASE_URL = '/api/matches';
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchMatches();
@@ -314,6 +316,16 @@
                 console.error('DELETE Hatası:', error);
                 alert('Sunucuya bağlanılamadı.');
             }
+        }
+
+        function filterMatches() {
+            const filter = document.getElementById('search-input').value.toLowerCase();
+            const rows = document.querySelectorAll('#matches-body tr');
+
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            });
         }
     </script>
 </body>
